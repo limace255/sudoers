@@ -1,0 +1,75 @@
+#jinja2: lstrip_blocks: "True"
+# {{ ansible_managed }}
+#
+# This file MUST be edited with the 'visudo' command as root.
+#
+# Please consider adding local content in /etc/sudoers.d/ instead of
+# directly modifying this file.
+#
+# See the man page for details on how to write a sudoers file.
+#
+# This file comes from privileges section under {{ item.filename }} dictionary
+
+{% if item.defaults is defined %}
+  {% for def in item.defaults %}
+Defaults{{ ":" ~ def.name if def.name is defined else "" }} {{ def.defaults }}
+  {% endfor %}
+{% endif %}
+
+{% if item.aliases is defined %}
+  {% for  alias in item.aliases %}
+    {% if alias.host is defined %}
+###
+# Host alias specification
+##
+      {% for value in alias.host %}
+Host_Alias {{ value.name }} = {{ value.hosts }}
+      {% endfor %}
+    {% endif %}
+    {% if alias.user is defined %}
+###
+# User alias specification
+###
+      {% for value in alias.user %}
+User_Alias  {{ value.name }} = {{ value.users }}
+      {% endfor %}
+    {% endif %}
+    {% if alias.runas is defined %}
+###
+# Runas alias specification
+###
+      {% for value in alias.runas %}
+Runas_Alias {{ value.name }} = {{ value.aliases }}
+      {% endfor %}
+    {% endif %}
+    {% if alias.cmnd is defined %}
+###
+# Cmnd alias specification
+###
+      {% for value in alias.cmnd %}
+Cmnd_Alias  {{ value.name }} = {{ value.cmnds }}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% if item.users is defined %}
+  {% for block in item.users -%}
+    {% if block.commands is not defined %}
+{{ block.name }} {{ block.hosts | default('ALL') }}={{ "(" ~ block.users | default('ALL') ~ ":" ~ block.groups | default('ALL') ~ ")" }} {{ "NOPASSWD:" if block.nopasswd | default(false) else "" }} ALL
+    {% elif block.commands is string %}
+{{ block.name }} {{ block.hosts | default('ALL') }}={{ "(" ~ block.users | default('ALL') ~ ":" ~ block.groups | default('ALL') ~ ")" }} {{ "NOPASSWD:" if block.nopasswd | default(false) else "" }} {{ block.commands }}
+    {% else %}
+      {% for command in block.commands %}
+{{ block.name }} {{ block.hosts | default('ALL') }}={{ "(" ~ block.users | default('ALL') ~ ":" ~ block.groups | default('ALL') ~ ")" }} {{ "NOPASSWD:" if block.nopasswd | default(false) else "" }} {{ command }}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% if item.blocks is defined -%}
+  {% for bollocks in item.blocks %}
+{{ bollocks.block }}
+  {% endfor %}
+{% endif %}
+

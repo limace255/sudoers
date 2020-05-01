@@ -1,0 +1,118 @@
+---
+# tasks file for sudoers
+
+- name: Installing sudo package
+  package:
+    name: "{{ sudo_package }}"
+    state: present
+  tags:
+    ["sudo", "package"]
+
+- name: "Ensure backup directory exists"
+  file:
+    state: "directory"
+    path: "{{ sudoers_backup_path }}"
+    mode: "0755"
+  tags:
+    ["sudo", "backup", "backup.dirs"]
+
+- name: "Ensure sudo subdirs exist"
+  file:
+    state: "directory"
+    path: "{{ sudo_sudoers_d_path }}"
+    mode: "0711"
+  when: create_sudoers_subdir == true
+  tags:
+    ["sudo", "dirs", "sudoers.dirs"]
+
+- name: "List subfiles of sudoers"
+  shell: "ls {{ sudo_sudoers_d_path }}"
+  register: files_sub
+  tags:
+    ["sudo", "files", "files.list"]
+
+- debug: var={{ item }}
+  with_items: files_sub
+  tags:
+    ["sudo", "files", "files.list"]
+
+- name: "Checking presence of main sudoers file"
+  stat:
+    path: "{{ main_sudoers_file }}"
+  register: sudoers
+  tags:
+    ["sudo", "files", "files.list"]
+
+- name: "Backup Main sudoers file"
+  copy:
+    src: "{{ main_sudoers_file }}"
+    dest: "{{ sudoers_backup_path }}/backup_sudoers-{{ ansible_date_time.iso8601 }}"
+    owner: "{{ sudo_sudoers_user }}"
+    group: "{{ sudo_sudoers_group }}"
+    mode: "{{ sudo_sudoers_mode }}"
+    remote_src: yes
+    backup: yes
+  when: sudoers.stat.exists == true
+  tags:
+    ["sudo", "backup", "backup.files"]
+
+- name: "Backup Sub sudoers files"
+  copy:
+    src: "{{ sudo_sudoers_d_path }}/{{ item }}"
+    dest: "{{ sudoers_backup_path }}/{{ item }}-{{ ansible_date_time.iso8601 }}"
+    owner: "{{ sudo_sudoers_user }}"
+    group: "{{ sudo_sudoers_group }}"
+    mode: "{{ sudo_sudoers_mode }}"
+    remote_src: yes
+    backup: yes
+  with_items: "{{ files_sub.stdout_lines }}"
+  tags:
+    ["sudo", "backup", "backup.files"]
+
+- name: "Remove files not managed in {{ sudo_sudoers_d_path }}"
+  file:
+    path: "{{ sudo_sudoers_d_path }}/{{ item }}"
+    state: absent
+  when: purge_other_sudoers_files == true
+  with_items: "{{ files_sub.stdout_lines }}"
+  tags:
+    ["sudo", "files", "files.remove"]
+
+- name: "Creating Main sudoers file {{ main_sudoers_file }}"
+  template:
+    src: "sudo.d.j2"
+    dest: "{{ main_sudoers_file }}"
+    validate: "visudo -cf %s"
+    owner: "{{ sudo_sudoers_user }}"
+    group: "{{ sudo_sudoers_group }}"
+    mode: "{{ sudo_sudoers_mode }}"
+  with_items: "{{ sudo_files }}"
+  tags:
+    ["sudo", "config", "config.files"]
+
+- name: "Creating Global Sub sudoers files in {{ sudo_sudoers_d_path }}/"
+  template:
+    src: "sudo.d.j2"
+    dest: "{{ sudo_sudoers_d_path }}/{{ item.filename }}"
+    validate: "visudo -cf %s"
+    owner: "{{ sudo_sudoers_user }}"
+    group: "{{ sudo_sudoers_group }}"
+    mode: "{{ sudo_sudoers_mode }}"
+  with_items: "{{ privileges }}"
+  when: create_sudoers_subdir == true and privileges is defined
+  tags:
+    ["sudo", "config", "config.files", "sudoers.d"]
+
+- name: "Creating Additional Sub sudoers files in {{ sudo_sudoers_d_path }}/"
+  template:
+    src: "sudo.d.j2"
+    dest: "{{ sudo_sudoers_d_path }}/{{ item.filename }}"
+    validate: "visudo -cf %s"
+    owner: "{{ sudo_sudoers_user }}"
+    group: "{{ sudo_sudoers_group }}"
+    mode: "{{ sudo_sudoers_mode }}"
+  with_items: "{{ more_privileges }}"
+  when: create_sudoers_subdir == true and more_privileges is defined
+  tags:
+    ["sudo", "config", "config.files", "sudoers.d"]
+

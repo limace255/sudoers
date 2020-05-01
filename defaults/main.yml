@@ -1,0 +1,26 @@
+---
+# defaults file for sudoers
+
+# package name (version)
+sudo_package: "sudo"
+
+main_sudoers_file: "/etc/sudoers"
+sudo_sudoers_d_path: "/etc/sudoers.d"
+#sudoers_backup: True
+sudoers_backup_path: "/etc/sudoers-backups"
+sudoers_visudo_path: "/usr/sbin/visudo"
+
+sudo_sudoers_user: "root"
+sudo_sudoers_group: "root"
+sudo_sudoers_mode: "0440"
+
+# If we have to include subdirs
+create_sudoers_subdir: true
+# additionnal sudoers.d files
+sudo_sub_files: []
+# list of username or %groupname
+sudo_users: []
+# list of username or %groupname and their defaults
+sudo_defaults: []
+# delete other files in /etc/sudoers.d that we do not manage
+purge_other_sudoers_files: true

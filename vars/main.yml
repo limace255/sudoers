@@ -1,0 +1,22 @@
+---
+# vars file for sudoers
+sudo_pkg_mgr_opts: update_cache=yes
+
+sudo_files:
+  - filename: "main_sudo"
+    defaults:
+      - defaults: env_reset
+      - defaults: mail_badpass
+      - defaults: badpass_message="Wrong password, try again while russian roulette id clicking..."
+      - defaults: passwd_tries=5
+      - defaults: secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      - defaults: logfile="/var/log/sudo.log"
+    users:
+      - name: "root"
+      - name: "%admin"
+      - name: "%sudo"
+        nopasswd: yes
+      - name: "%hiddens"
+        nopasswd: yes
+    blocks:
+      - block: "#includedir /etc/sudoers.d"
